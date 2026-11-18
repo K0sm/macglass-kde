@@ -1,0 +1,12 @@
+--- a/src/qml/main.qml	2026-11-18 19:41:11.618864370 +0100
++++ b/src/qml/main.qml	2026-11-18 19:41:11.628310171 +0100
+@@ -1760,7 +1760,8 @@
+         objectName: "dockTooltip"
+         Accessible.ignored: true
+         property bool show: false
+-        visible: show && root.hoveredName.length > 0
++        // MacGlass: no app-name tooltip on hover
++        visible: false
+ 
+         // Reset when hover changes
+         onVisibleChanged: if (!visible) show = false

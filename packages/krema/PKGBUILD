@@ -3,7 +3,7 @@
 
 pkgname=krema
 pkgver=0.13.0
-pkgrel=2  # MacGlass local: respect StartupNotify=false (see krema-respect-startupnotify.patch)
+pkgrel=3  # MacGlass local: respect StartupNotify=false, no hover tooltip (see the .patch files)
 pkgdesc='A lightweight dock for KDE Plasma 6 — spiritual successor to Latte Dock'
 arch=('x86_64' 'aarch64')
 url='https://krema.bhyoo.com/'
@@ -42,12 +42,15 @@ makedepends=(
     'qt6-base'
 )
 source=("$pkgname-$pkgver.tar.gz::https://github.com/isac322/krema/releases/download/v0.13.0/krema-0.13.0.tar.gz"
-        "krema-respect-startupnotify.patch")
+        "krema-respect-startupnotify.patch"
+        "krema-no-tooltip.patch")
 sha256sums=('213ddf7198d430cddc4ac110bcb8d5f0413b60f0414e3cf39492dd25a57af07d'
-            '62c5388efcfed24abe3732db508671f0239c0aef7cfc7994f270a82e2424731f')
+            '62c5388efcfed24abe3732db508671f0239c0aef7cfc7994f270a82e2424731f'
+            '829bad802e726bc14defe1db8555c72b15c279c80579d14eb7a869ab46f3166c')
 
 prepare() {
     patch -d "$pkgname-$pkgver" -p1 < krema-respect-startupnotify.patch
+    patch -d "$pkgname-$pkgver" -p1 < krema-no-tooltip.patch
 }
 
 build() {

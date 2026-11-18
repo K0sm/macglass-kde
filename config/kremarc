@@ -16,6 +16,7 @@ IconSize=52
 IconSpacing=6
 MaxZoomFactor=1.6
 MonitorMode=0
+PreviewEnabled=false
 PinnedLaunchers=preferred://filemanager,preferred://browser,applications:org.kde.konsole.desktop,applications:systemsettings.desktop,applications:org.macglass.DownloadsStack.desktop
 ReserveScreenSpace=false
 ShadowElevation=12
