@@ -6,6 +6,7 @@
 #   ./install.sh --keep-panels   don't replace your panels with the MacGlass menu bar
 #   ./install.sh --no-firefox    don't touch the Firefox profile
 #   ./install.sh --no-app-tweaks don't set monochrome tray icons for ZapZap/Vesktop/Cachy-Update
+#   ./install.sh --glass / --no-glass   liquid-glass app icons yes/no (otherwise you are asked)
 #   ./install.sh --yes           don't ask for confirmation
 #
 # Everything it changes is backed up first; ./uninstall.sh puts it back.
@@ -18,7 +19,7 @@ CONF="${XDG_CONFIG_HOME:-$HOME/.config}"
 MG="$DATA/macglass"               # runtime home: recipes, scripts, backups
 BIN="$HOME/.local/bin"
 
-DO_PACKAGES=1 DO_LAYOUT=1 DO_FIREFOX=1 DO_APPS=1 ASSUME_YES=0
+DO_PACKAGES=1 DO_LAYOUT=1 DO_FIREFOX=1 DO_APPS=1 ASSUME_YES=0 GLASS=
 for a in "$@"; do
     case "$a" in
         --no-packages) DO_PACKAGES=0 ;;
@@ -26,7 +27,9 @@ for a in "$@"; do
         --no-firefox) DO_FIREFOX=0 ;;
         --no-app-tweaks) DO_APPS=0 ;;
         --yes|-y) ASSUME_YES=1 ;;
-        -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
+        --glass) GLASS=1 ;;
+        --no-glass) GLASS=0 ;;
+        -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
         *) echo "Unknown option: $a" >&2; exit 2 ;;
     esac
 done
@@ -49,11 +52,22 @@ for c in kwriteconfig6 kreadconfig6 qdbus6 systemctl python3; do command -v "$c"
 . /etc/os-release
 LOGO=start-here-kde-symbolic; [[ "${ID:-}" == cachyos ]] && LOGO=macglass-cachyos-symbolic
 
+if [[ -z "$GLASS" ]]; then
+    if [[ $ASSUME_YES == 1 ]]; then GLASS=1
+    else
+        echo
+        echo "  App icons: \"liquid glass\" gives every app icon the same rounded tile with a soft glass"
+        echo "  rim and sheen (macOS Tahoe style); otherwise you get the WhiteSur icons as they are."
+        read -r -p "  Use liquid-glass app icons? [Y/n] " g; [[ "$g" == [nN]* ]] && GLASS=0 || GLASS=1
+    fi
+fi
+
 cat <<EOF
 
   MacGlass for KDE Plasma $PV
   • packages: $([[ $DO_PACKAGES == 1 ]] && echo "install repo deps + build Klassy, Darkly (patched), Krema (patched), WhiteSur icons, AppGrid, rounded-corners effect" || echo skipped)
   • menu bar: $([[ $DO_LAYOUT == 1 ]] && echo "REPLACES your current panels (Krema dock + macOS menu bar)" || echo "your panels are kept")
+  • app icons: $([[ $GLASS == 1 ]] && echo "liquid glass" || echo "WhiteSur, no glass")
   • Firefox: $([[ $DO_FIREFOX == 1 ]] && echo "traffic lights + Safari-style address bar in your default profile" || echo skipped)
   • backup of every changed file → $MG/backups/setup-<time>/ (undo: ./uninstall.sh)
 
@@ -64,7 +78,7 @@ if [[ $ASSUME_YES == 0 ]]; then read -r -p "Continue? [y/N] " ok; [[ "$ok" == [y
 TS="$(date +%Y%m%d-%H%M%S)"; BK="$MG/backups/setup-$TS"
 mkdir -p "$BK/config" "$BK/data"
 CONF_FILES=(kdeglobals kwinrc kwinrulesrc kcminputrc plasmarc plasmashellrc plasma-org.kde.plasma.desktop-appletsrc
-            dolphinrc breezerc kglobalshortcutsrc darklyrc krunnerrc kremarc macglassstackrc klassy gtk-3.0 gtk-4.0
+            dolphinrc breezerc kglobalshortcutsrc darklyrc krunnerrc kremarc macglassstackrc macglassrc klassy gtk-3.0 gtk-4.0
             arch-update/arch-update.conf ZapZap/ZapZap.conf vesktop/userAssets autostart/macglass-check-rebuilds.desktop)
 DATA_PATHS=(color-schemes/MacGlassDark.colors plasma/desktoptheme/MacGlass-Dark icons/MacGlass
             plasma/plasmoids/org.macglass.activeapp plasma/plasmoids/org.macglass.notificationcenter
@@ -132,7 +146,11 @@ cp "$HERE/plasmoids/KdeControlStation/contents/ui/CompactRepresentation.qml" "$M
 cp "$HERE/plasmoids/KdeControlStation/contents/ui/layouts/Tahoe.qml" "$MG/packages/kde-control-station/Tahoe.qml.macglass"
 
 # icon theme (MacGlass overrides on top of WhiteSur-dark)
+# (your own icons in $MG/icons/personal/ survive a re-install)
+[[ -d "$MG/icons/personal" ]] && mv "$MG/icons/personal" "$MG/.icons-personal.keep"
 rm -rf "$MG/icons"; cp -a "$HERE/icons" "$MG/icons"
+[[ -d "$MG/.icons-personal.keep" ]] && mv "$MG/.icons-personal.keep" "$MG/icons/personal"
+kw macglassrc Icons Glass "$([[ $GLASS == 1 ]] && echo true || echo false)"
 python3 -I "$MG/icons/build-icons.py" >/dev/null || die "Icon theme build failed."
 
 # Downloads stack (C++/QML) → ~/.local
