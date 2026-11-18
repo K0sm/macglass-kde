@@ -1,0 +1,45 @@
+--- a/src/qml/DockItem.qml	2026-11-18 20:43:31.282662116 +0100
++++ b/src/qml/DockItem.qml	2026-11-18 20:45:04.055405775 +0100
+@@ -895,12 +895,13 @@
+     readonly property string _bounceProp: DockView.isVertical ? "x" : "y"
+     readonly property real _bounceTarget: {
+         switch (DockView.edge) {
+-        case 0: return 8    // Top: bounce down
+-        case 1: return -8   // Bottom: bounce up
+-        case 2: return 8    // Left: bounce right
+-        case 3: return -8   // Right: bounce left
++        // MacGlass: gentle launch bounce (half height)
++        case 0: return 4    // Top: bounce down
++        case 1: return -4   // Bottom: bounce up
++        case 2: return 4    // Left: bounce right
++        case 3: return -4   // Right: bounce left
+         }
+-        return -8
++        return -4
+     }
+ 
+     SequentialAnimation {
+@@ -911,17 +912,17 @@
+             target: bounceTranslate; property: dockItem._bounceProp
+             to: dockItem._bounceTarget
+             duration: dockItem._finishingBounce
+-                ? Kirigami.Units.longDuration * 0.85
+-                : Kirigami.Units.longDuration
+-            easing.type: Easing.OutQuad
++                ? Kirigami.Units.longDuration * 1.1
++                : Kirigami.Units.longDuration * 1.4
++            easing.type: Easing.InOutSine
+         }
+         NumberAnimation {
+             target: bounceTranslate; property: dockItem._bounceProp
+             to: 0
+             duration: dockItem._finishingBounce
+-                ? Kirigami.Units.longDuration * 0.85
+-                : Kirigami.Units.longDuration
+-            easing.type: Easing.InQuad
++                ? Kirigami.Units.longDuration * 1.1
++                : Kirigami.Units.longDuration * 1.4
++            easing.type: Easing.InOutSine
+         }
+ 
+         onFinished: {
