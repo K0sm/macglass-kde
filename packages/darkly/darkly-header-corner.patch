@@ -1,0 +1,29 @@
+diff --color -ru a/kstyle/darklystyle.cpp b/kstyle/darklystyle.cpp
+--- a/kstyle/darklystyle.cpp	2026-11-18 09:10:57.403037811 +0100
++++ b/kstyle/darklystyle.cpp	2026-11-18 09:16:47.923255273 +0100
+@@ -6731,8 +6731,11 @@
+     else
+         color = normal;
+ 
+-    // make the top left corner of the first header rounded so that it doest poke out of the view
+-    if (isFirst && horizontal) {
++    // make the top left corner of the first header rounded so that it doest poke out of the view.
++    // Only real QHeaderViews sit inside a rounded view frame; Dolphin's frameless KItemListHeader
++    // (and other custom headers) would otherwise show a stray corner arc.
++    const bool inRoundedFrame(widget && widget->inherits("QHeaderView"));
++    if (isFirst && horizontal && inRoundedFrame) {
+         const int radius = StyleConfigData::cornerRadius();
+         painter->setRenderHint(QPainter::Antialiasing, true);
+         painter->setBrush(color);
+@@ -6759,7 +6762,10 @@
+     } else if (horizontal) {
+         _helper->renderOutlineLine(painter, bottomLine, palette, Qt::BottomEdge);
+ 
+-        if (headerOption->section != 0 || isFirst)
++        // Dolphin's leading side-padding cell is drawn as the first section of a
++        // non-QHeaderView header: give it no separator, so no empty box appears.
++        const bool paddingCell(isFirst && !inRoundedFrame);
++        if ((headerOption->section != 0 || isFirst) && !paddingCell)
+             _helper->renderOutlineLine(painter, sideLine, palette, sideAnchor, Qt::BottomEdge);
+ 
+     } else {

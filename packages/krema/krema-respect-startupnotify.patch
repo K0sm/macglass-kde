@@ -1,0 +1,62 @@
+diff --color -ru a/src/models/dockactions.cpp b/src/models/dockactions.cpp
+--- a/src/models/dockactions.cpp	2026-11-18 09:08:24.600448107 +0100
++++ b/src/models/dockactions.cpp	2026-11-18 09:08:24.612330218 +0100
+@@ -6,6 +6,8 @@
+ #include "dockmodel.h"
+ 
+ #include <KApplicationTrader>
++#include <KConfigGroup>
++#include <KDesktopFile>
+ #include <KService>
+ 
+ #include <QDateTime>
+@@ -17,6 +19,29 @@
+ namespace krema
+ {
+ 
++namespace
++{
++// Desktop Entry Spec: StartupNotify=false means the launched program will not
++// signal completion (e.g. it only toggles an overlay), so no "launching"
++// feedback should be shown for it. Defaults to true when the key is absent.
++bool wantsLaunchFeedback(const QModelIndex &idx, int launcherUrlRole)
++{
++    if (launcherUrlRole < 0)
++        return true;
++    const QUrl url = idx.data(launcherUrlRole).toUrl();
++    QString path;
++    if (url.scheme() == QLatin1String("applications")) {
++        if (const KService::Ptr service = KService::serviceByMenuId(url.path()))
++            path = service->entryPath();
++    } else if (url.isLocalFile()) {
++        path = url.toLocalFile();
++    }
++    if (path.isEmpty() || !KDesktopFile::isDesktopFile(path))
++        return true;
++    return KDesktopFile(path).desktopGroup().readEntry("StartupNotify", true);
++}
++} // namespace
++
+ DockActions::DockActions(DockModel *model, QObject *parent)
+     : QObject(parent)
+     , m_model(model)
+@@ -49,7 +74,8 @@
+         tasksModel.requestActivate(idx);
+     } else if (isLauncher) {
+         tasksModel.requestNewInstance(idx);
+-        Q_EMIT taskLaunching(index);
++        if (wantsLaunchFeedback(idx, tasks::roles().LauncherUrlWithoutIcon))
++            Q_EMIT taskLaunching(index);
+     }
+ }
+ 
+@@ -59,7 +85,8 @@
+     const QModelIndex idx = tasksModel.index(index, 0);
+     if (idx.isValid()) {
+         tasksModel.requestNewInstance(idx);
+-        Q_EMIT taskLaunching(index);
++        if (wantsLaunchFeedback(idx, tasks::roles().LauncherUrlWithoutIcon))
++            Q_EMIT taskLaunching(index);
+     }
+ }
+ 

@@ -1,0 +1,17 @@
+[Common]
+CornerRadius=12
+
+[Style]
+DolphinSidebarOpacity=72
+DolphinViewOpacity=100
+MenuBarOpacity=100
+MenuOpacity=82
+NewDolphinSelectionStyle=true
+OpaqueApps=gwenview,okular,kdenlive,krita,gimp,blender,obs,digikam,showfoto,darktable,inkscape,shotcut,olive-editor,natron,mpv,vlc,haruna,dragon,celluloid,kolourpaint,freecad,godot,steam,lutris,heroic,resolve
+RoundedRubberBandFrame=true
+SidePanelDrawFrame=false
+TabBarOpacity=100
+ToolBarOpacity=100
+TransparentDolphinView=false
+UnifiedTabBarKonsole=true
+ViewDrawTreeBranchLines=false

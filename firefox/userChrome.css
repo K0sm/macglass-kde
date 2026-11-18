@@ -1,0 +1,59 @@
+/* MacGlass — macOS traffic-light window buttons for Firefox (Linux, client-side title bar).
+   Installed into <profile>/chrome/userChrome.css; needs
+   toolkit.legacyUserProfileCustomizations.stylesheets = true. */
+
+.titlebar-buttonbox-container { align-items: center !important; }
+.titlebar-buttonbox { gap: 8px !important; padding-inline: 12px 10px !important; }
+
+.titlebar-buttonbox .titlebar-button {
+  appearance: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  min-width: 14px !important;
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 50% !important;
+  background-color: var(--mg-light) !important;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.25) !important;
+  transition: filter 120ms ease;
+}
+.titlebar-buttonbox .titlebar-button > .toolbarbutton-icon {
+  list-style-image: none !important;
+  width: 14px !important;
+  height: 14px !important;
+  padding: 0 !important;
+  background: none !important;
+  -moz-context-properties: fill;
+  fill: rgba(0, 0, 0, 0.55);
+}
+
+.titlebar-close   { --mg-light: #ff5f57; }
+.titlebar-min     { --mg-light: #febc2e; }
+.titlebar-max,
+.titlebar-restore { --mg-light: #28c840; }
+
+/* glyphs appear when hovering the button group, like macOS */
+.titlebar-buttonbox:hover .titlebar-close > .toolbarbutton-icon {
+  background: no-repeat center / 8px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M1.2 1.2l5.6 5.6M6.8 1.2L1.2 6.8' stroke='%234d0000' stroke-width='1.3' stroke-linecap='round'/%3E%3C/svg%3E") !important;
+}
+.titlebar-buttonbox:hover .titlebar-min > .toolbarbutton-icon {
+  background: no-repeat center / 8px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M1 4h6' stroke='%23995700' stroke-width='1.3' stroke-linecap='round'/%3E%3C/svg%3E") !important;
+}
+.titlebar-buttonbox:hover .titlebar-max > .toolbarbutton-icon,
+.titlebar-buttonbox:hover .titlebar-restore > .toolbarbutton-icon {
+  background: no-repeat center / 8px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 1v6M1 4h6' stroke='%23006500' stroke-width='1.3' stroke-linecap='round'/%3E%3C/svg%3E") !important;
+}
+.titlebar-buttonbox .titlebar-button:hover  { filter: brightness(1.08); }
+.titlebar-buttonbox .titlebar-button:active { filter: brightness(0.85); }
+
+/* inactive window: neutral grey lights */
+:root:-moz-window-inactive .titlebar-buttonbox:not(:hover) .titlebar-button {
+  background-color: #4a4a4d !important;
+  box-shadow: none !important;
+}
+
+/* ---- Safari-style address bar: centred while not focused ---- */
+#urlbar:not([focused]) #urlbar-input,
+#urlbar:not([focused]) .urlbar-input {
+  text-align: center !important;
+}

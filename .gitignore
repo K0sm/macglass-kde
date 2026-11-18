@@ -1,0 +1,7 @@
+__pycache__/
+stack/build/
+packages/*/src/
+packages/*/pkg/
+*.pkg.tar.*
+*.tar.gz
+*.log

@@ -1,0 +1,373 @@
+Only in Darkly-0.5.45: .clang-format
+diff --color -ru a/kstyle/darklyblurhelper.cpp Darkly-0.5.45/kstyle/darklyblurhelper.cpp
+--- a/kstyle/darklyblurhelper.cpp	2026-11-17 23:19:57.000000000 +0100
++++ Darkly-0.5.45/kstyle/darklyblurhelper.cpp	2026-11-18 14:16:54.365235489 +0100
+@@ -273,12 +273,13 @@
+                     widget->findChildren<QWidget *>(QRegularExpression("^(places|terminal|info|folders)Dock$"), Qt::FindDirectChildrenOnly);
+                 for (auto sb : sidebars) {
+                     if (sb && sb->isVisible()) {
+-                        if (sb->x() == 0)
+-                            region += roundedRegion(QRect(sb->pos(), sb->rect().size()), StyleConfigData::cornerRadius(), false, false, true, false);
+-                        else if (sb->x() + sb->width() == widget->width())
+-                            region += roundedRegion(QRect(sb->pos(), sb->rect().size()), StyleConfigData::cornerRadius(), false, false, false, true);
+-                        else
+-                            region += QRect(sb->pos(), sb->rect().size());
++                        // MacGlass: blur only the inset rounded panel (matches Style::finderPanelRect)
++                        const int gap = 8;
++                        const bool atLeft = sb->x() <= 0;
++                        const bool atRight = sb->x() + sb->width() >= widget->width();
++                        const QRect panel = QRect(sb->pos(), sb->rect().size())
++                                                .adjusted(atLeft || !atRight ? gap : gap / 2, 0 /* FinderGapTop */, atRight ? -gap : -gap / 2, -gap);
++                        region += roundedRegion(panel, StyleConfigData::cornerRadius(), true, true, true, true);
+                     }
+                 }
+ 
+diff --color -ru a/kstyle/darklystyle.cpp Darkly-0.5.45/kstyle/darklystyle.cpp
+--- a/kstyle/darklystyle.cpp	2026-11-18 13:27:02.716538559 +0100
++++ Darkly-0.5.45/kstyle/darklystyle.cpp	2026-11-18 14:16:54.365097439 +0100
+@@ -43,6 +43,7 @@
+ #include <QDialog>
+ #include <QDialogButtonBox>
+ #include <QDockWidget>
++#include <QPainterPath>
+ #include <QFormLayout>
+ #include <QGraphicsView>
+ #include <QGraphicsWidget>
+@@ -370,12 +371,98 @@
+     int  m_thickness;
+ };
+ 
++namespace
++{
++// MacGlass: macOS Finder-style sidebar — the dock is drawn as an inset, rounded glass panel.
++constexpr int FinderGap = 8;      // gap between panel and window/view edges
++constexpr int FinderGapTop = 0;   // the toolbar's own (padded) bottom margin is the gap: 8 px above and below its path field
++constexpr int FinderPad = 6;      // extra padding between panel edge and list items (Finder: ~6-8 px)
++QRect finderPanelRect(const QWidget *dock)
++{
++    const QRect r = dock->rect();
++    const QWidget *win = dock->window();
++    const bool atLeft = dock->x() <= 0;
++    const bool atRight = win && dock->x() + dock->width() >= win->width();
++    return r.adjusted(atLeft || !atRight ? FinderGap : FinderGap / 2, FinderGapTop, atRight ? -FinderGap : -FinderGap / 2, -FinderGap);
++}
++// MacGlass: Dolphin's content area (each DolphinViewContainer, so both halves of a split view) as a rounded card
++constexpr int CardPad = 4; // >= radius * (1 - 1/sqrt(2)) for radius 12, so square children stay inside the corners
++QRect finderCardRect(const QWidget *container)
++{
++    const QWidget *win = container->window();
++    const QPoint pos = win ? container->mapTo(win, QPoint(0, 0)) : QPoint();
++    const bool atLeft = pos.x() <= 0;
++    const bool atRight = !win || pos.x() + container->width() >= win->width();
++    return container->rect().adjusted(atLeft ? FinderGap : FinderGap / 2, FinderGapTop, atRight ? -FinderGap : -FinderGap / 2, -FinderGap);
++}
++void finderUpdateCardMargins(QWidget *container)
++{
++    const QRect r = container->rect(), c = finderCardRect(container);
++    const QMargins m(c.left() - r.left() + CardPad, c.top() - r.top() + CardPad, r.right() - c.right() + CardPad, r.bottom() - c.bottom() + CardPad);
++    if (container->contentsMargins() != m)
++        container->setContentsMargins(m);
++}
++void finderUpdateMargins(QWidget *dock)
++{
++    const QRect r = dock->rect(), p = finderPanelRect(dock);
++    // QDockWidgetLayout ignores the top margin (the title area always starts at y = 0); the top inset is
++    // applied to the panel's content below, with extra room so "Places" doesn't hug the panel's top edge.
++    const QMargins m(p.left() - r.left() + FinderPad, 0, r.right() - p.right() + FinderPad, r.bottom() - p.bottom() + FinderPad);
++    if (dock->contentsMargins() != m)
++        dock->setContentsMargins(m);
++    // Dolphin's locked title bar has a hard-coded 0x0 size hint, so push the panel's content down instead.
++    struct ScrollAreaAccess : QAbstractScrollArea {
++        using QAbstractScrollArea::setViewportMargins;
++        using QAbstractScrollArea::viewportMargins;
++    };
++    const int topInset = p.top() - r.top() + FinderPad + 4;
++    QWidget *dockContent = qobject_cast<QDockWidget *>(dock) ? static_cast<QDockWidget *>(dock)->widget() : nullptr;
++    if (auto *area = qobject_cast<QAbstractScrollArea *>(dockContent)) {
++        auto *access = static_cast<ScrollAreaAccess *>(area);
++        QMargins vm = access->viewportMargins();
++        if (vm.top() != topInset) {
++            vm.setTop(topInset);
++            access->setViewportMargins(vm);
++        }
++    } else if (QWidget *content = dockContent) {
++        QMargins cm = content->contentsMargins();
++        if (cm.top() != topInset) {
++            cm.setTop(topInset);
++            content->setContentsMargins(cm);
++        }
++    }
++}
++
++} // namespace (MacGlass helpers)
++
+ //______________________________________________________________
+ void Style::polish(QWidget *widget)
+ {
+     if (!widget)
+         return;
+ 
++    // MacGlass: balance Dolphin's toolbar — same space above the path field as between it and the cards
++    // (QToolBarLayout places items with its own single margin, so pad the layout: 4 px -> 8 px all round;
++    //  together with a 0 px card top gap that gives 8 px above and 8 px below the field, like the side gaps)
++    if (_isDolphin && qobject_cast<QToolBar *>(widget) && widget->objectName() == QLatin1String("mainToolBar") && widget->layout()) {
++        static const char prop[] = "_macglass_toolbar_padded";
++        if (!widget->property(prop).toBool()) {
++            widget->setProperty(prop, true);
++            const QMargins m = widget->layout()->contentsMargins();
++            widget->layout()->setContentsMargins(m + QMargins(4, 4, 4, 4));
++        }
++    }
++    if (_isDolphin && widget->inherits("DolphinStatusBar")) {
++        widget->removeEventFilter(this);
++        widget->installEventFilter(this);
++    }
++    // MacGlass: Dolphin content card (painted in eventFilter)
++    if (_isDolphin && widget->inherits("DolphinViewContainer")) {
++        widget->removeEventFilter(this);
++        widget->installEventFilter(this);
++        finderUpdateCardMargins(widget);
++    }
++
+     // register widget to animations
+     _animations->registerWidget(widget);
+     _windowManager->registerWidget(widget);
+@@ -1350,11 +1437,18 @@
+         fcn = &Style::emptyPrimitive;
+         break;
+     case PE_Frame:
+-        fcn = &Style::drawFramePrimitive;
++        // MacGlass: Dolphin's small status bar is plain text on the content card (no chip outline)
++        fcn = (_isDolphin && widget && widget->inherits("DolphinStatusBar")) ? &Style::emptyPrimitive : &Style::drawFramePrimitive;
+         break;
+     case PE_FrameLineEdit:
+         fcn = &Style::drawFrameLineEditPrimitive;
+         break;
++    case PE_PanelLineEdit:
++        // MacGlass: Dolphin's breadcrumb bar (KUrlNavigator) paints PE_PanelLineEdit; QCommonStyle would fill a
++        // square Base rect under the rounded frame. Draw it as the same rounded field as the editable location bar.
++        if (_isDolphin && widget && widget->inherits("DolphinUrlNavigator"))
++            fcn = &Style::drawFrameLineEditPrimitive;
++        break;
+     case PE_FrameMenu:
+         fcn = &Style::drawFrameMenuPrimitive;
+         break;
+@@ -1700,6 +1794,62 @@
+ 
+ bool Style::eventFilter(QObject *object, QEvent *event)
+ {
++    if (_isDolphin && object->isWidgetType() && object->inherits("DolphinStatusBar")) {
++        // Dolphin positions the small status bar at x = 0 of the view container, ignoring its margins:
++        // pull it inside the content card. Its chip is painted with palette Window -> use the card colour.
++        auto *bar = static_cast<QWidget *>(object);
++        if (event->type() == QEvent::Move || event->type() == QEvent::Resize || event->type() == QEvent::Show) {
++            if (QWidget *container = bar->parentWidget()) {
++                const QRect content = container->contentsRect();
++                QRect g = bar->geometry();
++                if (g.left() < content.left() || g.right() > content.right()) {
++                    const int w = qMin(g.width(), content.width());
++                    g.moveLeft(content.left());
++                    g.setWidth(w);
++                    bar->setGeometry(g);
++                }
++                QPalette pal = bar->palette();
++                const QColor card = container->palette().color(QPalette::Base);
++                if (pal.color(QPalette::Window) != card) {
++                    pal.setColor(QPalette::Window, card);
++                    bar->setPalette(pal);
++                }
++            }
++        }
++        return false;
++    }
++    if (_isDolphin && object->isWidgetType() && object->inherits("DolphinViewContainer")) {
++        auto *container = static_cast<QWidget *>(object);
++        switch (event->type()) {
++        case QEvent::Paint: {
++            // window-chrome gap + rounded card in the view colour, with a hairline edge
++            QPainter painter(container);
++            painter.setClipRegion(static_cast<QPaintEvent *>(event)->region());
++            const auto &palette = container->palette();
++            const QRectF card(finderCardRect(container));
++            const qreal radius = StyleConfigData::cornerRadius();
++            QPainterPath outer, inner;
++            outer.addRect(container->rect());
++            inner.addRoundedRect(card, radius, radius);
++            painter.setRenderHint(QPainter::Antialiasing, true);
++            painter.fillPath(outer.subtracted(inner), palette.color(QPalette::Window));
++            painter.fillPath(inner, palette.color(QPalette::Base));
++            painter.setPen(QColor(255, 255, 255, _helper->isDarkTheme(palette) ? 20 : 60));
++            painter.setBrush(Qt::NoBrush);
++            painter.drawRoundedRect(card.adjusted(0.5, 0.5, -0.5, -0.5), radius, radius);
++            break;
++        }
++        case QEvent::Resize:
++        case QEvent::Move:
++        case QEvent::Show:
++        case QEvent::ParentChange:
++            finderUpdateCardMargins(container);
++            break;
++        default:
++            break;
++        }
++        return false;
++    }
+     if (auto dockWidget = qobject_cast<QDockWidget *>(object)) {
+         return eventFilterDockWidget(dockWidget, event);
+     } else if (auto subWindow = qobject_cast<QMdiSubWindow *>(object)) {
+@@ -2090,10 +2240,26 @@
+ 
+                 bool darkTheme = _helper->isDarkTheme(palette);
+ 
+-                painter.fillRect(rect, backgroundColor);
+-
+-                // top shadow
+-                if (StyleConfigData::dolphinSidebarOpacity() < _helper->titleBarColor(true).alphaF() * 100.0 && StyleConfigData::widgetDrawShadow()) {
++                // MacGlass: view-coloured gap around an inset rounded glass panel (macOS Finder)
++                {
++                    const QRectF panel(finderPanelRect(dockWidget));
++                    const qreal radius = StyleConfigData::cornerRadius();
++                    QPainterPath outer, inner;
++                    outer.addRect(rect);
++                    inner.addRoundedRect(panel, radius, radius);
++                    painter.setRenderHint(QPainter::Antialiasing, true);
++                    painter.fillPath(outer.subtracted(inner), palette.color(QPalette::Window)); // chrome, like the content card's gap
++                    // a touch lighter than the view, so the panel reads as its own glass surface
++                    QColor glass = darkTheme ? KColorUtils::mix(backgroundColor, QColor(255, 255, 255, backgroundColor.alpha()), 0.06) : backgroundColor;
++                    glass.setAlpha(backgroundColor.alpha());
++                    painter.fillPath(inner, glass);
++                    painter.setPen(QColor(255, 255, 255, darkTheme ? 20 : 60));
++                    painter.setBrush(Qt::NoBrush);
++                    painter.drawRoundedRect(panel.adjusted(0.5, 0.5, -0.5, -0.5), radius, radius);
++                    painter.setRenderHint(QPainter::Antialiasing, false);
++                }
++                // top shadow (MacGlass: disabled — belongs to a flush sidebar, not an inset panel)
++                if (false && StyleConfigData::dolphinSidebarOpacity() < _helper->titleBarColor(true).alphaF() * 100.0 && StyleConfigData::widgetDrawShadow()) {
+                     painter.setBrush(Qt::NoBrush);
+                     painter.setPen(QColor(0, 0, 0, darkTheme ? 80 : 40));
+                     painter.drawLine(rect.topLeft(), rect.topRight());
+@@ -2108,8 +2274,8 @@
+                     painter.drawLine(rect.topLeft() + QPoint(0, 3), rect.topRight() + QPoint(0, 3));
+                 }
+ 
+-                // side shadow
+-                if (StyleConfigData::dolphinSidebarOpacity() < (palette.color(QPalette::Window).alpha() / 255) * 100) {
++                // side shadow (MacGlass: disabled)
++                if (false && StyleConfigData::dolphinSidebarOpacity() < (palette.color(QPalette::Window).alpha() / 255) * 100) {
+                     /*painter.setBrush( Qt::NoBrush );
+                     QLinearGradient gradient( rect.topLeft(), rect.bottomLeft() );
+                     gradient.setColorAt( 0, QColor(0,0,0,0) );
+@@ -2152,8 +2318,10 @@
+ 
+     }
+     // update blur region
+-    else if (event->type() == QEvent::Move || event->type() == QEvent::Show || event->type() == QEvent::Hide) {
++    else if (event->type() == QEvent::Move || event->type() == QEvent::Show || event->type() == QEvent::Hide || event->type() == QEvent::Resize) {
+         if (dockWidget->inherits("DolphinDockWidget") && _isDolphin && StyleConfigData::dolphinSidebarOpacity() < 100) {
++            if (!dockWidget->isFloating())
++                finderUpdateMargins(dockWidget); // MacGlass: keep list items inside the rounded panel
+             if (_translucentWidgets.contains(dockWidget->window()))
+                 _blurHelper->forceUpdate(dockWidget->window());
+         }
+@@ -4101,10 +4269,18 @@
+     const auto isControl = isQtQuickControl(option, widget);
+ 
+     if (_isDolphin && !isControl && widget && widget->inherits("DolphinUrlNavigator") && StyleConfigData::disableDolphinUrlNavigatorBackground()) {
+-        // skip the navigator's background, outline, and shadow
+-        if (StyleConfigData::toolBarOpacity() >= 100) {
+-            painter->fillRect(rect, palette.color(QPalette::Window));
+-        }
++        // MacGlass: no outline/shadow, but a rounded macOS-style field instead of a square fill —
++        // subtle at rest, brighter while hovered/active.
++        const bool lit = option->state & (State_MouseOver | State_HasFocus);
++        // tint of the toolbar colour, so it looks the same in active and inactive windows
++        const QColor field = KColorUtils::mix(palette.color(QPalette::Window), palette.color(QPalette::WindowText), lit ? 0.11 : 0.06);
++        const qreal radius = qMin<qreal>(_helper->frameRadius(PenWidth::NoPen, -1), rect.height() / 2.0);
++        painter->save();
++        painter->setRenderHint(QPainter::Antialiasing, true);
++        painter->setPen(Qt::NoPen);
++        painter->setBrush(field);
++        painter->drawRoundedRect(QRectF(rect), radius, radius);
++        painter->restore();
+ 
+         return true;
+     }
+@@ -4144,7 +4320,14 @@
+ 
+         painter->setPen(Qt::NoPen);
+         painter->setBrush(background);
+-        painter->drawRect(rect);
++        if (_isDolphin) {
++            // MacGlass: Dolphin's breadcrumb bar is a short field — keep it rounded like the editable one (macOS Finder)
++            const qreal radius = qMin<qreal>(_helper->frameRadius(PenWidth::NoPen, -1), rect.height() / 2.0); // same as the editable field
++            painter->setRenderHint(QPainter::Antialiasing, true);
++            painter->drawRoundedRect(QRectF(rect), radius, radius);
++        } else {
++            painter->drawRect(rect);
++        }
+         return true;
+ 
+     } else {
+@@ -6731,6 +6914,35 @@
+     else
+         color = normal;
+ 
++    // MacGlass: Dolphin (frameless KItemListHeader inside the rounded content card) gets a Finder-style header:
++    // no box — titles on the card, short column separators and one hairline underneath. Hover/press: soft pill.
++    if (_isDolphin && horizontal && !(widget && widget->inherits("QHeaderView"))) {
++        painter->save();
++        painter->setRenderHint(QPainter::Antialiasing, true);
++        if (sunken || mouseOver || animated) {
++            QColor pill = palette.color(QPalette::WindowText);
++            pill.setAlphaF(sunken ? 0.12 : 0.07 * (animated ? opacity : 1.0));
++            painter->setPen(Qt::NoPen);
++            painter->setBrush(pill);
++            painter->drawRoundedRect(QRectF(rect).adjusted(1, 2, -1, -2), 6, 6);
++        }
++        QColor line = palette.color(QPalette::WindowText);
++        line.setAlphaF(0.12);
++        painter->setRenderHint(QPainter::Antialiasing, false);
++        painter->setPen(Qt::NoPen);
++        painter->setBrush(line);
++        painter->drawRect(QRect(rect.left(), rect.bottom(), rect.width(), 1));
++        // Dolphin's leading/trailing side-padding cells get no separator
++        const bool paddingCell(isFirst || headerOption->position == QStyleOptionHeader::End);
++        if (!paddingCell && !isCorner) {
++            const int inset = rect.height() / 4;
++            const int x = reverseLayout ? rect.left() : rect.right();
++            painter->drawRect(QRect(x, rect.top() + inset, 1, rect.height() - 2 * inset));
++        }
++        painter->restore();
++        return true;
++    }
++
+     // make the top left corner of the first header rounded so that it doest poke out of the view.
+     // Only real QHeaderViews sit inside a rounded view frame; Dolphin's frameless KItemListHeader
+     // (and other custom headers) would otherwise show a stray corner arc.
+@@ -6777,7 +6989,7 @@
+ }
+ 
+ //___________________________________________________________________________________
+-bool Style::drawHeaderEmptyAreaControl(const QStyleOption *option, QPainter *painter, const QWidget *) const
++bool Style::drawHeaderEmptyAreaControl(const QStyleOption *option, QPainter *painter, const QWidget *widget) const
+ {
+     // use the same background as in drawHeaderPrimitive
+     const auto &rect(option->rect);
+@@ -6786,6 +6998,17 @@
+     const bool horizontal(option->state & QStyle::State_Horizontal);
+     const bool reverseLayout(option->direction == Qt::RightToLeft);
+ 
++    // MacGlass: Finder-style Dolphin header — empty area is only the continuing hairline
++    if (_isDolphin && horizontal && !(widget && widget->inherits("QHeaderView"))) {
++        QColor line = palette.color(QPalette::WindowText);
++        line.setAlphaF(0.12);
++        painter->setRenderHint(QPainter::Antialiasing, false);
++        painter->setPen(Qt::NoPen);
++        painter->setBrush(line);
++        painter->drawRect(QRect(rect.left(), rect.bottom(), rect.width(), 1));
++        return true;
++    }
++
+     // fill
+     painter->setRenderHint(QPainter::Antialiasing, false);
+     painter->setBrush(palette.color(QPalette::Button));

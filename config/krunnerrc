@@ -1,0 +1,4 @@
+[General]
+ActivateWhenTypingOnDesktop=true
+FreeFloating=true
+historyBehavior=CompletionSuggestion

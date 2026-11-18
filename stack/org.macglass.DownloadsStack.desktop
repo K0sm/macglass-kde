@@ -1,0 +1,34 @@
+[Desktop Entry]
+Type=Application
+Name=Downloads
+GenericName=Downloads Stack
+Comment=Show your Downloads folder as a macOS-style stack
+Exec=macglass-stack --toggle
+Icon=folder-download
+Terminal=false
+StartupNotify=false
+NoDisplay=false
+Categories=Utility;FileTools;
+Keywords=stack;files;fan;grid;
+X-KDE-StartupNotify=false
+Actions=fan;grid;list;folder;
+
+[Desktop Action fan]
+Name=Open as Fan
+Icon=view-list-tree
+Exec=macglass-stack --show --view fan
+
+[Desktop Action grid]
+Name=Open as Grid
+Icon=view-list-icons
+Exec=macglass-stack --show --view grid
+
+[Desktop Action list]
+Name=Open as List
+Icon=view-list-details
+Exec=macglass-stack --show --view list
+
+[Desktop Action folder]
+Name=Open Downloads Folder
+Icon=document-open-folder
+Exec=macglass-stack --open-folder

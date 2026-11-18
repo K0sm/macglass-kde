@@ -1,0 +1,22 @@
+/* MacGlass — rounded client-side-decorated windows (GTK3 apps, Chromium/Helium in GTK mode).
+   Traffic-light buttons come from KDE's window_decorations.css (rendered from the Klassy decoration). */
+window.csd,
+window.csd decoration {
+  border-radius: 12px;
+}
+window.csd > .titlebar,
+window.csd > headerbar,
+window.csd headerbar.titlebar {
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+window.csd.maximized, window.csd.maximized decoration,
+window.csd.fullscreen, window.csd.fullscreen decoration,
+window.csd.tiled, window.csd.tiled decoration,
+window.csd.tiled-top, window.csd.tiled-left, window.csd.tiled-right, window.csd.tiled-bottom {
+  border-radius: 0;
+}
+window.csd.maximized > .titlebar, window.csd.maximized > headerbar,
+window.csd.tiled > .titlebar, window.csd.tiled > headerbar {
+  border-radius: 0;
+}

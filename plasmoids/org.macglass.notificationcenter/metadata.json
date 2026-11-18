@@ -1,0 +1,14 @@
+{
+    "KPlugin": {
+        "Authors": [{ "Name": "MacGlass" }],
+        "Category": "Date and Time",
+        "Description": "macOS-style menu-bar clock; click it for Notification Center (notifications + calendar)",
+        "Icon": "preferences-desktop-notification",
+        "Id": "org.macglass.notificationcenter",
+        "License": "GPL-3.0-or-later",
+        "Name": "MacGlass Clock & Notification Center",
+        "Version": "1.0"
+    },
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

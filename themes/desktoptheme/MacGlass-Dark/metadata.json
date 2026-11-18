@@ -1,0 +1,19 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "vinceliuice@hotmail.com",
+                "Name": "Vince Liuice"
+            }
+        ],
+        "Category": "Plasma 6.0 theme",
+        "Description": "MacGlass dark Plasma style (based on MacTahoe-Dark by Vince Liuice, GPL-3.0)",
+        "EnabledByDefault": true,
+        "Id": "MacGlass-Dark",
+        "License": "GPL-3.0",
+        "Name": "MacGlass Dark",
+        "Version": "1.0",
+        "Website": "https://github.com/vinceliuice"
+    },
+    "X-Plasma-API": "5.0"
+}

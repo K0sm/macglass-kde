@@ -1,0 +1,14 @@
+{
+    "KPlugin": {
+        "Authors": [{ "Name": "MacGlass" }],
+        "Category": "Windows and Tasks",
+        "Description": "Shows the name of the active application, macOS menu-bar style",
+        "Icon": "preferences-system-windows",
+        "Id": "org.macglass.activeapp",
+        "License": "GPL-3.0-or-later",
+        "Name": "Active Application Name",
+        "Version": "1.0"
+    },
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API-Minimum-Version": "6.0"
+}
