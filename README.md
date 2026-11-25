@@ -5,7 +5,7 @@ Wayland, NVIDIA). One script installs it, one script removes it.
 
 ```
 git clone https://github.com/K0sm/macglass-kde.git && cd macglass-kde
-./install.sh          # asks for your sudo password once, for packages
+./install.sh          # full-screen, step-by-step installer (sudo password once, for packages)
 ./uninstall.sh        # puts everything back
 ```
 
@@ -49,31 +49,52 @@ Your wallpaper, monitors and login screen are left as they are.
 
 ```
 ./install.sh --no-packages    # packages already installed: only (re)apply files and settings
-./install.sh --keep-panels    # keep your panels instead of the MacGlass menu bar
+./install.sh --keep-panels    # keep your panels instead of the MacGlass menu bar (otherwise you are asked)
 ./install.sh --no-firefox     # leave the Firefox profile alone
 ./install.sh --no-app-tweaks  # don't switch ZapZap / Vesktop / Cachy-Update to monochrome tray icons
 ./install.sh --glass          # liquid-glass app icons, without asking
 ./install.sh --no-glass       # plain WhiteSur app icons, without asking
-./install.sh --yes            # no confirmation prompt (liquid glass on, unless --no-glass)
+./install.sh --yes            # ask nothing (liquid glass on, MacGlass menu bar, unless the flags above say otherwise)
 ```
 
 Re-running `install.sh` is safe: each run makes a new backup first.
 
 ## What the installer does
 
-1. **Backup** — every config file and theme folder it will touch → `~/.local/share/macglass/backups/setup-<time>/`
+It runs full-screen in the terminal, one step at a time, with a progress bar and the list of steps on top.
+Menus work with ↑/↓ + Enter (or the option's number); long jobs show a spinner and timer, and their output goes to
+`~/.local/share/macglass/logs/install-<time>.log` (a failure shows the end of it in a red box). Ctrl+C stops safely.
+
+1. **Check** — Arch-based system, Plasma 6, Wayland, KDE tools.
+2. **Your custom icons** — *before anything changes*, a table shows how custom icons are affected, marking what
+   it found on your PC (your icon theme, launchers with image icons, own hicolor icons, folder icons):
+
+   | How the icon was set | With MacGlass |
+   |---|---|
+   | Icon theme in System Settings | Replaced (uninstall restores it) |
+   | Icons in `~/.local/share/icons/hicolor` | Replaced if WhiteSur has one with the same name |
+   | App launcher pointing to an image file | Kept, but without the glass tile |
+   | Folder icon from an image file | Kept |
+   | Folder icon picked by name | Shown in WhiteSur style |
+
+   To keep your own icons (glassed, and winning over WhiteSur), choose *Pause*: it opens
+   `~/.local/share/macglass/icons/personal/`; save each icon as `<icon-name>.png` (the `Icon=` value of the app's
+   `.desktop` file), press Enter, and the list refreshes.
+3. **Options** — icon style (liquid glass / plain) and panels (MacGlass menu bar / keep yours), then a summary to confirm.
+4. **Backup** — every config file and theme folder it will touch → `~/.local/share/macglass/backups/setup-<time>/`
    (plus a list of files it creates). `uninstall.sh` uses the newest one.
-2. **Packages** — repo: Inter, JetBrains Mono Nerd Font, Capitaine cursors, appmenu-gtk-module, build tools and Qt
+5. **Packages** — repo: Inter, JetBrains Mono Nerd Font, Capitaine cursors, appmenu-gtk-module, build tools and Qt
    modules. Built locally from the reviewed recipes in `packages/` (pinned versions/commits):
    `klassy`, `darkly` (+2 MacGlass patches), `krema` (+1 patch), `whitesur-icon-theme`,
    `plasma6-applets-appgrid`, `kwin-effect-rounded-corners-git`. Already-installed matching versions are skipped.
-3. **Files** — colour scheme, Plasma style, icon theme (built by `icons/build-icons.py`), the three widgets,
+6. **Files** — colour scheme, Plasma style, icon theme (built by `icons/build-icons.py`), the three widgets,
    the Downloads stack (built into `~/.local`), Quick Look, Dolphin shortcut, login rebuild check.
-4. **Settings** — via `kwriteconfig6`, key by key (other settings in those files are kept); whole files only
+7. **Settings** — via `kwriteconfig6`, key by key (other settings in those files are kept); whole files only
    for MacGlass-owned configs (`klassyrc`, `darklyrc`, `kremarc`, `krunnerrc`, `macglassstackrc`).
-5. **Menu bar** — `lib/menubar.js` (Plasma scripting) replaces all panels with the top bar, then
+8. **Menu bar** — `lib/menubar.js` (Plasma scripting) replaces all panels with the top bar, then
    `lib/configure-menubar.py` writes the widget settings with Plasma stopped.
-6. **Firefox** (default profile) — `userChrome.css` link + a few `user.js` prefs.
+9. **Firefox and apps** — `userChrome.css` link + a few `user.js` prefs (default profile); monochrome tray icons.
+10. **Done** — reloads KWin, Plasma and the dock, then shows what to do next.
 
 ## Folder layout
 
@@ -88,7 +109,7 @@ Re-running `install.sh` is safe: each run makes a new backup first.
 | `icons/` | icon theme builder + sources |
 | `config/` | MacGlass-owned config files (Klassy, Darkly, Krema, KRunner, stack) |
 | `gtk/`, `firefox/`, `dolphin/` | GTK CSS, Firefox userChrome, Dolphin shortcut file |
-| `lib/` | menu-bar builder |
+| `lib/` | menu-bar builder, `tui.sh` (the installer's full-screen interface, plain bash) |
 | `bin/check-rebuilds.sh` | login check (installed to `~/.local/share/macglass/bin/`) |
 | `bin/macglass-glass`, `apps/org.macglass.IconStyle.desktop` | liquid-glass icons on/off tool + its launcher |
 
