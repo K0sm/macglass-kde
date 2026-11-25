@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Install MacGlass
+Comment=Open the step-by-step MacGlass installer in Konsole
+Icon=preferences-desktop-theme
+Exec=konsole --hold -e bash -c "exec bash \\"\\$(dirname -- \\"\\$1\\")/install.sh\\"" macglass %k
+Terminal=false
+Categories=Settings;

@@ -11,6 +11,12 @@ git clone https://github.com/K0sm/macglass-kde.git && cd macglass-kde
 
 Log out and back in once after installing.
 
+**From Dolphin:** open the cloned folder and click **Install MacGlass.desktop** (double-click if that
+is your Dolphin setting). Approve KDE's trust/execute prompt only for your own trusted clone.
+It opens the installer in Konsole and works even if `install.sh` lost its executable permission.
+If Dolphin requires executable permission on the launcher, enable **Properties → Permissions →
+Is executable** first. A normal `git clone` preserves executable permissions for both files.
+
 ## What you get
 
 | Piece | Implementation |
@@ -54,7 +60,7 @@ Your wallpaper, monitors and login screen are left as they are.
 ./install.sh --no-app-tweaks  # don't switch ZapZap / Vesktop / Cachy-Update to monochrome tray icons
 ./install.sh --glass          # liquid-glass app icons, without asking
 ./install.sh --no-glass       # plain WhiteSur app icons, without asking
-./install.sh --yes            # ask nothing (liquid glass on, MacGlass menu bar, unless the flags above say otherwise)
+./install.sh --yes            # accept everything, including the full system upgrade (glass on, MacGlass menu bar)
 ```
 
 Re-running `install.sh` is safe: each run makes a new backup first.
@@ -84,7 +90,9 @@ Menus work with ↑/↓ + Enter (or the option's number); long jobs show a spinn
 4. **Backup** — every config file and theme folder it will touch → `~/.local/share/macglass/backups/setup-<time>/`
    (plus a list of files it creates). `uninstall.sh` preselects the newest one; if you installed more than once,
    it offers the others too (the oldest is your desktop from before MacGlass). `--yes` skips its questions.
-5. **Packages** — repo: Inter, JetBrains Mono Nerd Font, Capitaine cursors, appmenu-gtk-module, build tools and Qt
+5. **Packages** — asks before a full system update and dependency installation (`pacman -Syu --needed`).
+   Pacman's transaction stays visible for review and confirmation (unless `--yes`); system upgrades are
+   not undone by the MacGlass uninstaller. Repo: Inter, JetBrains Mono Nerd Font, Capitaine cursors, appmenu-gtk-module, build tools and Qt
    modules. Built locally from the reviewed recipes in `packages/` (pinned versions/commits):
    `klassy`, `darkly` (+2 MacGlass patches), `krema` (+1 patch), `whitesur-icon-theme`,
    `plasma6-applets-appgrid`, `kwin-effect-rounded-corners-git`. Already-installed matching versions are skipped.
@@ -102,6 +110,7 @@ Menus work with ↑/↓ + Enter (or the option's number); long jobs show a spinn
 | Path | What |
 |---|---|
 | `install.sh`, `uninstall.sh` | install / undo |
+| `Install MacGlass.desktop` | clickable installer launcher for Dolphin (opens Konsole) |
 | `packages/<name>/` | PKGBUILDs and patches (`darkly-finder-sidebar.patch`, `darkly-header-corner.patch`, `krema-respect-startupnotify.patch`) |
 | `themes/` | MacGlass Dark colours, MacGlass-Dark Plasma style |
 | `plasmoids/` | active-app name, Notification Center, Control Station (patched) + its originals |
@@ -145,6 +154,16 @@ Some parts are compiled against exact KWin/Qt versions. A login notification tel
 - Global menu works for Qt/KDE apps; Firefox exports none, GTK4/libadwaita apps have no menu bar.
 - The notification history follows System Settings → Notifications ("Show in history"), including *Other applications*.
 - Dolphin's Selection Mode moves from Space to **Ctrl+Shift+Space** (Space is Quick Look).
+
+## Package download errors (404)
+
+A missing package download usually means your local package databases are stale or a mirror is out of sync.
+If installation stopped in **Packages**, your desktop settings have not been changed yet.
+Update the clone with `git pull` and rerun the installer: it now refreshes databases and performs a full
+system upgrade together with dependency installation. If 404 errors persist, refresh/select mirrors using
+your distro's mirror-management tool, run `sudo pacman -Syu` successfully, then rerun `./install.sh`.
+Do not run `pacman -Sy` alone or bypass the failure with `--no-packages`.
+Logs are in `~/.local/share/macglass/logs/`.
 
 ## Credits
 

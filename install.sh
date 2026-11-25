@@ -164,7 +164,7 @@ ffline="traffic lights + Safari-style address bar"
 [[ $DO_FIREFOX == 1 && -z "$FFPROF" ]] && ffline="${YE}no profile found — open Firefox once, then re-run${C0}"
 tui_screen $S_OPTIONS
 tui_box "$GR" "Ready to install — summary" \
-    "$(yn $DO_PACKAGES) Packages      $([[ $DO_PACKAGES == 1 ]] && echo "build Klassy, Darkly, Krema, WhiteSur, AppGrid + fonts" || echo "skipped (--no-packages)")" \
+    "$(yn $DO_PACKAGES) Packages      $([[ $DO_PACKAGES == 1 ]] && echo "full system update + dependencies; build themes and dock" || echo "skipped (--no-packages)")" \
     "$(yn 1) Theme         colours, Plasma style, glass windows, fonts, cursor" \
     "$(yn 1) App icons     $([[ $GLASS == 1 ]] && echo "liquid glass" || echo "plain WhiteSur")" \
     "$(yn $DO_LAYOUT) Menu bar      $([[ $DO_LAYOUT == 1 ]] && echo "${YE}replaces your panels${C0} (menu bar + Krema dock)" || echo "your panels are kept")" \
@@ -218,6 +218,12 @@ sleep 1
 tui_screen $S_PACKAGES
 LOCAL_PKGS=(klassy darkly krema whitesur-icon-theme plasma6-applets-appgrid kwin-effect-rounded-corners-git)
 if [[ $DO_PACKAGES == 1 ]]; then
+    tui_box "$YE" "System update required" \
+        "Arch-based systems need a full update when package databases are refreshed. This avoids stale package URLs (404 errors) and unsupported partial upgrades." \
+        "The next command updates your whole system and installs MacGlass dependencies. Review pacman's transaction before accepting it." \
+        "System package updates are NOT undone by ./uninstall.sh."
+    tui_menu update 0 "Continue with the full system update and dependencies" "Cancel before updating packages"
+    [[ $update == 0 ]] || { tui_info "Cancelled before updating packages. Desktop settings were not changed."; exit 0; }
     if ! sudo -n true 2>/dev/null; then
         tui_box "$YE" "Administrator password" \
             "Packages are installed system-wide, so sudo needs your password ${B}once${C0}." \
@@ -228,16 +234,24 @@ if [[ $DO_PACKAGES == 1 ]]; then
     # keep sudo alive while the builds run (they can take longer than sudo's 5-minute timeout)
     ( while kill -0 $$ 2>/dev/null; do sudo -n -v 2>/dev/null || exit; sleep 45; done ) & SUDO_KEEPALIVE=$!
     tui_screen $S_PACKAGES
-    tui_run "Repository packages (fonts, cursors, build tools, Qt modules)" \
-        sudo pacman -S --needed --noconfirm base-devel git cmake ninja extra-cmake-modules \
+    echo
+    printf '\n### Full system update and repository packages\n' >> "$TUI_LOG"
+    pacman_flags=(-Syu --needed)
+    [[ $ASSUME_YES == 1 ]] && pacman_flags+=(--noconfirm)
+    if ! sudo pacman "${pacman_flags[@]}" base-devel git cmake ninja extra-cmake-modules \
         inter-font capitaine-cursors ttf-jetbrains-mono-nerd appmenu-gtk-module \
-        python-pillow librsvg kdialog qt6-declarative qt6-multimedia qt6-webengine layer-shell-qt kio
+        python-pillow librsvg kdialog qt6-declarative qt6-multimedia qt6-webengine layer-shell-qt kio \
+        2>&1 | tee -a "$TUI_LOG"; then
+        tui_warn "If downloads return 404, refresh your distro's mirrors, then rerun the installer."
+        tui_warn "Do not use pacman -Sy alone: it can leave an unsupported partial upgrade."
+        die "System update and dependency installation failed; desktop settings were not changed."
+    fi
     mkdir -p "$MG/packages"
     for p in "${LOCAL_PKGS[@]}"; do
         dst="$MG/packages/$p"; mkdir -p "$dst"; cp -a "$HERE/packages/$p/." "$dst/"
         want="$(cd "$dst" && bash -c 'source PKGBUILD >/dev/null 2>&1; echo "${epoch:+$epoch:}$pkgver-$pkgrel"')"
         name="$(cd "$dst" && bash -c 'source PKGBUILD >/dev/null 2>&1; echo "${pkgname[0]}"')"
-        have="$(pacman -Q "$name" 2>/dev/null | awk '{print $2}')"
+        have="$(pacman -Q "$name" 2>/dev/null | awk '{print $2}' || true)"
         if [[ "$have" == "$want" ]]; then tui_ok "$name $have ${D}already installed${C0}"; continue; fi
         tui_run "Building $name $want ${D}(installed: ${have:-none})${C0}" \
             bash -c 'cd "$1" && makepkg -si --noconfirm --needed -f' _ "$dst"
