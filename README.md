@@ -5,7 +5,7 @@ Wayland, NVIDIA). One script installs it, one script removes it.
 
 ```
 git clone https://github.com/K0sm/macglass-kde.git && cd macglass-kde
-./install.sh          # full-screen, step-by-step installer (sudo password once, for packages)
+./install.sh          # full-screen, step-by-step installer (sudo password for packages)
 ./uninstall.sh        # same style: shows what it restores, lets you pick a backup, puts everything back
 ```
 
@@ -96,6 +96,8 @@ Menus work with ↑/↓ + Enter (or the option's number); long jobs show a spinn
    modules. Built locally from the reviewed recipes in `packages/` (pinned versions/commits):
    `klassy`, `darkly` (+2 MacGlass patches), `krema` (+1 patch), `whitesur-icon-theme`,
    `plasma6-applets-appgrid`, `kwin-effect-rounded-corners-git`. Already-installed matching versions are skipped.
+   Builds stay in the foreground with visible, logged output so sudo can ask for your password again
+   if authentication expires while compiling.
 6. **Files** — colour scheme, Plasma style, icon theme (built by `icons/build-icons.py`), the three widgets,
    the Downloads stack (built into `~/.local`), Quick Look, Dolphin shortcut, login rebuild check.
 7. **Settings** — via `kwriteconfig6`, key by key (other settings in those files are kept); whole files only

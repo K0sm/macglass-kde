@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # MacGlass — macOS-style KDE Plasma 6 desktop. Installer (full-screen, step by step).
 #
-#   ./install.sh                 full install (asks for your sudo password once, for packages)
+#   ./install.sh                 full install (asks for your sudo password for packages)
 #   ./install.sh --no-packages   skip pacman/makepkg (packages already installed)
 #   ./install.sh --keep-panels   don't replace your panels with the MacGlass menu bar (otherwise you are asked)
 #   ./install.sh --no-firefox    don't touch the Firefox profile
@@ -226,7 +226,7 @@ if [[ $DO_PACKAGES == 1 ]]; then
     [[ $update == 0 ]] || { tui_info "Cancelled before updating packages. Desktop settings were not changed."; exit 0; }
     if ! sudo -n true 2>/dev/null; then
         tui_box "$YE" "Administrator password" \
-            "Packages are installed system-wide, so sudo needs your password ${B}once${C0}." \
+            "Packages are installed system-wide, so sudo needs your password. It may ask again after a long build." \
             "It is only used by pacman; the rest of MacGlass lives in your home folder."
         echo
         sudo -v || die "sudo was not authorised."
@@ -253,7 +253,7 @@ if [[ $DO_PACKAGES == 1 ]]; then
         name="$(cd "$dst" && bash -c 'source PKGBUILD >/dev/null 2>&1; echo "${pkgname[0]}"')"
         have="$(pacman -Q "$name" 2>/dev/null | awk '{print $2}' || true)"
         if [[ "$have" == "$want" ]]; then tui_ok "$name $have ${D}already installed${C0}"; continue; fi
-        tui_run "Building $name $want ${D}(installed: ${have:-none})${C0}" \
+        tui_run_interactive "Building $name $want ${D}(installed: ${have:-none})${C0}" \
             bash -c 'cd "$1" && makepkg -si --noconfirm --needed -f' _ "$dst"
     done
 else

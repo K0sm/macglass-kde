@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import shutil
+import shlex
 import subprocess
 import tempfile
 import time
@@ -38,10 +39,18 @@ class InstallerTests(unittest.TestCase):
         target.write_text("#!/usr/bin/env bash\nset -eu\n" + body + "\n")
         target.chmod(0o755)
 
-    def packages(self, **env):
+    def packages(self, terminal=False, **env):
         self.command("sudo", """
 if [[ $1 == -n ]]; then
     [[ $2 == true ]]
+    exit
+fi
+if [[ $1 == --test-install ]]; then
+    [[ -t 0 ]]
+    [[ "$(ps -o tpgid= -p $$)" == "$(ps -o pgid= -p $$)" ]]
+    printf 'sudo test prompt: '
+    read -r answer
+    [[ $answer == y ]]
     exit
 fi
 exec "$@"
@@ -59,7 +68,12 @@ else
     fi
 fi
 """)
-        self.command("makepkg", 'printf "makepkg %s\\n" "$*" >> "$CALLS"; touch .test-installed')
+        self.command("makepkg", """
+printf "makepkg %s\\n" "$*" >> "$CALLS"
+[[ ${TEST_BUILD_FAIL:-0} == 0 ]] || { echo 'test build failed'; exit 1; }
+if [[ ${TEST_BUILD_TTY:-0} == 1 ]]; then sudo --test-install; fi
+touch .test-installed
+""")
         self.command("sleep", "exit 0")
         source = (ROOT / "install.sh").read_text()
         section = source.split("# 5. Packages\n", 1)[1].split("# 6. Files\n", 1)[0]
@@ -75,11 +89,14 @@ tui_screen() { :; }
 tui_menu() { printf -v "$1" '%s' "$TEST_CANCEL"; }
 die() { tui_fail "$*"; }
 """ + section
+        command = ["bash", "-c", script]
+        if terminal:
+            command = ["script", "-q", "-e", "-c", shlex.join(command), "/dev/null"]
         return subprocess.run(
-            ["bash", "-c", script],
+            command,
             env={**self.env, **env},
             text=True,
-            input="y\n",
+            input="y\n" * 7,
             capture_output=True,
             timeout=10,
         )
@@ -104,6 +121,18 @@ die() { tui_fail "$*"; }
     def test_package_confirmation_can_read_stdin(self):
         result = self.packages(TEST_READ="1")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_build_can_prompt_on_foreground_terminal(self):
+        result = self.packages(terminal=True, TEST_BUILD_TTY="1")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout.count("sudo test prompt:"), 6)
+        self.assertEqual(sum(call.startswith("makepkg ") for call in self.calls()), 6)
+
+    def test_failed_build_stops_and_logs_error(self):
+        result = self.packages(TEST_BUILD_FAIL="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(sum(call.startswith("makepkg ") for call in self.calls()), 1)
+        self.assertIn("test build failed", (self.home / "install.log").read_text())
 
     def test_cancel_does_not_run_package_commands(self):
         result = self.packages(TEST_CANCEL="1")

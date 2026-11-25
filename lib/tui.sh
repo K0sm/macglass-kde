@@ -149,6 +149,18 @@ tui_fail() {
     exit 1
 }
 
+# Keep sudo prompts in the foreground; background jobs cannot safely read the terminal.
+tui_run_interactive() {
+    local label="$1"; shift
+    printf '\n### %s\n' "$label" >> "$TUI_LOG"
+    tui_info "$label"
+    if "$@" 2>&1 | tee -a "$TUI_LOG"; then
+        tui_ok "$label"
+        return 0
+    fi
+    tui_fail "$label failed"
+}
+
 # tui_run <label> <command …>: run with a spinner; output → $TUI_LOG; stops the installer on failure
 tui_run() {
     local label="$1"; shift
