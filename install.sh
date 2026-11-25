@@ -83,7 +83,7 @@ CONF_FILES=(kdeglobals kwinrc kwinrulesrc kcminputrc plasmarc plasmashellrc plas
 DATA_PATHS=(color-schemes/MacGlassDark.colors plasma/desktoptheme/MacGlass-Dark icons/MacGlass
             plasma/plasmoids/org.macglass.activeapp plasma/plasmoids/org.macglass.notificationcenter
             plasma/plasmoids/KdeControlStation kio/servicemenus/macglass-quicklook.desktop
-            kxmlgui5/dolphin/dolphinui.rc applications/org.macglass.DownloadsStack.desktop)
+            kxmlgui5/dolphin/dolphinui.rc applications/org.macglass.DownloadsStack.desktop applications/org.macglass.IconStyle.desktop)
 : > "$BK/created.txt"
 for f in "${CONF_FILES[@]}"; do
     if [[ -e "$CONF/$f" ]]; then mkdir -p "$BK/config/$(dirname "$f")"; cp -a "$CONF/$f" "$BK/config/$f"; else echo "config/$f" >> "$BK/created.txt"; fi
@@ -91,7 +91,7 @@ done
 for f in "${DATA_PATHS[@]}"; do
     if [[ -e "$DATA/$f" ]]; then mkdir -p "$BK/data/$(dirname "$f")"; cp -a "$DATA/$f" "$BK/data/$f"; else echo "data/$f" >> "$BK/created.txt"; fi
 done
-for f in macglass-stack macglass-quicklook; do [[ -e "$BIN/$f" ]] || echo "bin/$f" >> "$BK/created.txt"; done
+for f in macglass-stack macglass-quicklook macglass-glass; do [[ -e "$BIN/$f" ]] || echo "bin/$f" >> "$BK/created.txt"; done
 FFPROF=""
 if [[ -f "$HOME/.mozilla/firefox/profiles.ini" || -f "$CONF/mozilla/firefox/profiles.ini" ]]; then
     FFROOT="$CONF/mozilla/firefox"; [[ -f "$FFROOT/profiles.ini" ]] || FFROOT="$HOME/.mozilla/firefox"
@@ -112,7 +112,7 @@ if [[ $DO_PACKAGES == 1 ]]; then
     say "Repository packages"
     sudo pacman -S --needed --noconfirm base-devel git cmake ninja extra-cmake-modules \
         inter-font capitaine-cursors ttf-jetbrains-mono-nerd appmenu-gtk-module \
-        python-pillow librsvg qt6-declarative qt6-multimedia qt6-webengine layer-shell-qt kio
+        python-pillow librsvg kdialog qt6-declarative qt6-multimedia qt6-webengine layer-shell-qt kio
 
     say "Local packages (built from the reviewed recipes in packages/)"
     mkdir -p "$MG/packages"
@@ -152,6 +152,9 @@ rm -rf "$MG/icons"; cp -a "$HERE/icons" "$MG/icons"
 [[ -d "$MG/.icons-personal.keep" ]] && mv "$MG/.icons-personal.keep" "$MG/icons/personal"
 kw macglassrc Icons Glass "$([[ $GLASS == 1 ]] && echo true || echo false)"
 python3 -I "$MG/icons/build-icons.py" >/dev/null || die "Icon theme build failed."
+# switch the glass on/off later: `macglass-glass` (terminal) or "MacGlass Icon Style" (app launcher)
+install -m 755 "$HERE/bin/macglass-glass" "$BIN/macglass-glass"
+sed "s|@BIN@|$BIN|g" "$HERE/apps/org.macglass.IconStyle.desktop" > "$DATA/applications/org.macglass.IconStyle.desktop"
 
 # Downloads stack (C++/QML) → ~/.local
 rm -rf "$MG/src/macglass-stack"; mkdir -p "$MG/src"; cp -a "$HERE/stack" "$MG/src/macglass-stack"
@@ -324,6 +327,7 @@ kbuildsycoca6 >/dev/null 2>&1 || true
 cat <<EOF
 
   MacGlass is installed.  Log out and back in once so every app picks up fonts, cursor and GTK settings.
+  Liquid-glass icons on/off later: "MacGlass Icon Style" in the app launcher (or: macglass-glass on|off)
   Undo everything:  $HERE/uninstall.sh
   Notes and tweaks: $MG/SETUP-README.md
 EOF

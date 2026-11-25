@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# MacGlass — switch the liquid-glass app icons on or off, without re-installing.
+#   macglass-glass            ask with a dialog (or show the status in a terminal without kdialog)
+#   macglass-glass on|off     set it
+#   macglass-glass toggle     flip it
+#   macglass-glass status     print the current setting
+# Also re-run "macglass-glass on" after installing new apps, so their icons get the glass too.
+set -euo pipefail
+DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
+BUILD="$DATA/macglass/icons/build-icons.py"
+[[ -f "$BUILD" ]] || { echo "MacGlass icon builder not found ($BUILD) — is MacGlass installed?" >&2; exit 1; }
+
+current() { [[ "$(kreadconfig6 --file macglassrc --group Icons --key Glass --default true)" == false ]] && echo off || echo on; }
+gui() { [[ -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]] && command -v kdialog >/dev/null; }
+tell() { echo "$1"; gui && [[ ! -t 1 ]] && kdialog --title "MacGlass" --passivepopup "$1" 5 >/dev/null 2>&1 || true; }
+
+apply() {
+    kwriteconfig6 --file macglassrc --group Icons --key Glass "$([[ $1 == on ]] && echo true || echo false)"
+    python3 -I "$BUILD" >/dev/null || { tell "Icon build failed."; exit 1; }
+    rm -f "${XDG_CACHE_HOME:-$HOME/.cache}/icon-cache.kcache"
+    kbuildsycoca6 >/dev/null 2>&1 || true
+    # running KDE apps reload their icons on this signal (the same one System Settings sends)
+    dbus-send --session --type=signal /KIconLoader org.kde.KIconLoader.iconChanged int32:0 >/dev/null 2>&1 || true
+    for pid in $(pgrep -x -u "$(id -u)" krema || true); do kill "$pid" 2>/dev/null || true; done
+    if [[ -n "${pid:-}" ]]; then sleep 1; setsid -f krema >/dev/null 2>&1; fi
+    tell "Liquid-glass app icons are now $1. Apps that are already open may need a restart to show it."
+}
+
+case "${1:-ask}" in
+    on|off) apply "$1" ;;
+    toggle) [[ "$(current)" == on ]] && apply off || apply on ;;
+    status) echo "Liquid-glass app icons: $(current)" ;;
+    ask)
+        if gui; then
+            now="$(current)"
+            rc=0; kdialog --title "MacGlass icon style" --yesnocancel \
+                "Liquid-glass app icons are currently <b>$now</b>.<br><br>Liquid glass puts every app icon on the same rounded tile with a soft glass rim and sheen (macOS Tahoe style). Without it you get the WhiteSur icons as they are." \
+                --yes-label "Liquid glass" --no-label "Plain icons" || rc=$?
+            case $rc in 0) apply on ;; 1) apply off ;; *) exit 0 ;; esac
+        else
+            echo "Liquid-glass app icons: $(current)"; sed -n '3,7p' "$0" | sed 's/^# //'
+        fi ;;
+    -h|--help) sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//' ;;
+    *) echo "Unknown option: $1 (use on, off, toggle or status)" >&2; exit 2 ;;
+esac

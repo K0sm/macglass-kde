@@ -19,7 +19,7 @@ Log out and back in once after installing.
 | App style | Darkly (patched) — 12 px radius, translucent menus with blur, opaque list for games/media apps |
 | Colours / Plasma style | *MacGlass Dark* colour scheme + *MacGlass-Dark* Plasma style (from MacTahoe-Dark by Vince Liuice, tuned): floating rounded popups at 55 % with native KWin blur |
 | Icons / cursor / fonts | WhiteSur-dark + a small *MacGlass* override theme (Dolphin, Firefox, … tiles; symbolic menu-bar glyphs) · Capitaine cursors · Inter · JetBrains Mono Nerd Font |
-| Liquid-glass icons (optional) | every app icon (dock, launcher, task switcher) on the same squircle tile with a soft glass rim and sheen; the installer asks |
+| Liquid-glass icons (optional) | every app icon (dock, launcher, task switcher) on the same squircle tile with a soft glass rim and sheen; the installer asks, and **MacGlass Icon Style** switches it later |
 | Menu bar | Distro logo (AppGrid launcher, **Meta**) · active app name · global menu · app status icons · input source · one chevron for system items · **Control Center** · **clock → Notification Center** |
 | Control Center | KDE Control Station 2.11 (EliverLara, GPL-3), "Tahoe" layout, patched for a tray-sized icon and no empty tile |
 | Notification Center | `org.macglass.notificationcenter` — macOS clock (tabular digits, moon while Do Not Disturb), click for notification history + calendar |
@@ -90,6 +90,7 @@ Re-running `install.sh` is safe: each run makes a new backup first.
 | `gtk/`, `firefox/`, `dolphin/` | GTK CSS, Firefox userChrome, Dolphin shortcut file |
 | `lib/` | menu-bar builder |
 | `bin/check-rebuilds.sh` | login check (installed to `~/.local/share/macglass/bin/`) |
+| `bin/macglass-glass`, `apps/org.macglass.IconStyle.desktop` | liquid-glass icons on/off tool + its launcher |
 
 ## Maintenance
 
@@ -106,10 +107,10 @@ Some parts are compiled against exact KWin/Qt versions. A login notification tel
 - Glass: Klassy `TitleBarOpacityActive/Inactive`; Darkly `MenuOpacity`, `DolphinSidebarOpacity`
 - Popup translucency: `~/.local/share/plasma/desktoptheme/MacGlass-Dark/dialogs/background.svgz` — change **all**
   `opacity:` values of the frame pieces together, or a square appears inside popups
-- Liquid-glass icons on/off later, without re-installing:
-  `kwriteconfig6 --file macglassrc --group Icons --key Glass false` (or `true`), then
-  `python3 ~/.local/share/macglass/icons/build-icons.py`. Re-run that command too after installing new apps,
-  so their icons get the glass.
+- Liquid-glass icons on/off later, without re-installing: open **MacGlass Icon Style** from the app launcher
+  (it asks *Liquid glass* / *Plain icons*; right-click it for direct on/off), or in a terminal
+  `macglass-glass on|off|toggle|status`. It rebuilds the icons and refreshes the dock.
+  Run `macglass-glass on` too after installing new apps, so their icons get the glass.
 - Your own app icons: put `<icon-name>.png` in `~/.local/share/macglass/icons/personal/` and rebuild as above
   (they get the glass too; list names in `personal/no-glass.txt` to keep them exactly as they are)
 - How much white at the glass borders: `RIM` / `EDGE` at the top of `icons/glass.py`

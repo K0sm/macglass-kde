@@ -1,0 +1,19 @@
+[Desktop Entry]
+Type=Application
+Name=MacGlass Icon Style
+GenericName=Liquid-glass app icons on/off
+Comment=Switch the liquid-glass app icons on or off
+Exec=@BIN@/macglass-glass
+Icon=preferences-desktop-icons
+Categories=Settings;DesktopSettings;Qt;KDE;
+Keywords=glass;icons;macglass;theme;
+StartupNotify=false
+Actions=on;off;
+
+[Desktop Action on]
+Name=Liquid glass on
+Exec=@BIN@/macglass-glass on
+
+[Desktop Action off]
+Name=Liquid glass off (plain icons)
+Exec=@BIN@/macglass-glass off
