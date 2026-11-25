@@ -6,7 +6,7 @@ Wayland, NVIDIA). One script installs it, one script removes it.
 ```
 git clone https://github.com/K0sm/macglass-kde.git && cd macglass-kde
 ./install.sh          # full-screen, step-by-step installer (sudo password once, for packages)
-./uninstall.sh        # puts everything back
+./uninstall.sh        # same style: shows what it restores, lets you pick a backup, puts everything back
 ```
 
 Log out and back in once after installing.
@@ -82,7 +82,8 @@ Menus work with ↑/↓ + Enter (or the option's number); long jobs show a spinn
    `.desktop` file), press Enter, and the list refreshes.
 3. **Options** — icon style (liquid glass / plain) and panels (MacGlass menu bar / keep yours), then a summary to confirm.
 4. **Backup** — every config file and theme folder it will touch → `~/.local/share/macglass/backups/setup-<time>/`
-   (plus a list of files it creates). `uninstall.sh` uses the newest one.
+   (plus a list of files it creates). `uninstall.sh` preselects the newest one; if you installed more than once,
+   it offers the others too (the oldest is your desktop from before MacGlass). `--yes` skips its questions.
 5. **Packages** — repo: Inter, JetBrains Mono Nerd Font, Capitaine cursors, appmenu-gtk-module, build tools and Qt
    modules. Built locally from the reviewed recipes in `packages/` (pinned versions/commits):
    `klassy`, `darkly` (+2 MacGlass patches), `krema` (+1 patch), `whitesur-icon-theme`,

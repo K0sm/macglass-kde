@@ -486,5 +486,5 @@ tui_box "$GR" "✓ MacGlass is installed" \
     "${CY}•${C0} Undo everything:   $HERE/uninstall.sh" \
     "${CY}•${C0} Notes and tweaks:  ~/.local/share/macglass/SETUP-README.md" \
     "--" \
-    "${D}Log: $TUI_LOG${C0}"
+    "${D}Log: $(tui_short "$TUI_LOG")${C0}"
 echo

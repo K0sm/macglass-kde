@@ -4,6 +4,7 @@
 shopt -s extglob        # needed by tui_vlen's pattern (must be set before it is parsed)
 TUI_STEPS=()            # step names, set by the caller
 TUI_LOG=/dev/null       # tui_run appends command output here
+TUI_TITLE=installer     # shown in the banner
 TUI_ASK=1               # 0 = never wait for keys (--yes or no terminal)
 [[ -t 1 && "${TERM:-dumb}" != dumb ]] && TUI_FANCY=1 || TUI_FANCY=0
 [[ -t 0 ]] || TUI_ASK=0
@@ -17,6 +18,7 @@ fi
 tui_cols() { local c; c=$(tput cols 2>/dev/null || echo 80); [[ $c =~ ^[0-9]+$ ]] || c=80; echo "$c"; }
 tui_width() { local c; c=$(tui_cols); (( c < 84 )) && echo $(( c > 44 ? c - 4 : 40 )) || echo 80; }
 tui_vlen() { local s="${1//$'\e'\[+([0-9;])m/}"; echo "${#s}"; }
+tui_short() { [[ $1 == "$HOME"/* ]] && echo "~${1#"$HOME"}" || echo "$1"; }   # ~ instead of $HOME
 tui_rep() { local s="" i; for (( i = 0; i < $2; i++ )); do s+="$1"; done; printf '%s' "$s"; }
 
 tui_cursor() { [[ $TUI_FANCY == 1 ]] && { [[ $1 == on ]] && printf '\e[?25h' || printf '\e[?25l'; }; return 0; }
@@ -55,7 +57,7 @@ tui_box() {
 tui_banner() {
     local w; w=$(tui_width)
     printf '\n  %s%s%s\n' "$CY" "$(tui_rep ━ "$w")" "$C0"
-    printf '  %s  ◐  MacGlass%s %s·  macOS-style KDE Plasma 6 desktop  ·  installer%s\n' "$B$CY" "$C0" "$D" "$C0"
+    printf '  %s  ◐  MacGlass%s %s·  macOS-style KDE Plasma 6 desktop  ·  %s%s\n' "$B$CY" "$C0" "$D" "$TUI_TITLE" "$C0"
     printf '  %s%s%s\n' "$CY" "$(tui_rep ━ "$w")" "$C0"
 }
 
@@ -140,7 +142,7 @@ tui_fail() {
     local lines=()
     if [[ -s "$TUI_LOG" ]]; then
         while IFS= read -r l; do lines+=("${D}${l:0:$(( $(tui_width) - 6 ))}${C0}"); done < <(tail -n 15 "$TUI_LOG")
-        tui_box "$RE" "✗ $1" "${lines[@]}" "--" "Full log: $TUI_LOG"
+        tui_box "$RE" "✗ $1" "${lines[@]}" "--" "Full log: $(tui_short "$TUI_LOG")"
     else
         tui_box "$RE" "✗ Stopped" "$1"
     fi
